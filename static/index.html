@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jarvis · Agent Freelance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<style>
+  :root {
+    color-scheme: dark;
+    --fond: #070b10; --surface: #0b1218; --surface-2: #111b24; --surface-3: #16232e;
+    --bord: #1c2a36; --bord-fort: #27404f;
+    --texte: #e3eef5; --doux: #7d93a3; --pale: #56697a;
+    --accent: #3fd0ee; --accent-doux: rgb(63 208 238 / .12); --accent-lueur: rgb(63 208 238 / .35);
+    --violet: #a98bff; --danger: #ff7a6b; --ok: #5fe0a5;
+    --serie-envoyes: #1a9fbe; --serie-recus: #9a72f0;
+    --rayon: 12px;
+    --titre: "Chakra Petch", Inter, system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: radial-gradient(1200px 600px at 50% -10%, rgb(63 208 238 / .07), transparent 60%), var(--fond);
+    color: var(--texte); font: 15px/1.55 Inter, system-ui, sans-serif;
+    display: grid; grid-template-rows: auto 1fr; min-height: 0; height: 100dvh;
+  }
+  button, select, input { font: inherit; color: var(--texte); }
+  button {
+    cursor: pointer; border: 1px solid var(--bord); background: var(--surface);
+    border-radius: 8px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  button:hover { background: var(--surface-2); border-color: var(--bord-fort); }
+  button:disabled { opacity: .5; cursor: default; }
+  button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ph-duotone { font-size: 18px; }
+  .espace { flex: 1; }
+
+  /* En-tête */
+  header {
+    display: flex; align-items: center; gap: 10px; padding: 10px 18px;
+    border-bottom: 1px solid var(--bord); background: rgb(11 18 24 / .85); backdrop-filter: blur(8px);
+  }
+  .marque { display: flex; flex-direction: column; line-height: 1.15; }
+  .marque strong { font: 600 17px/1.1 var(--titre); letter-spacing: .18em; color: var(--accent); }
+  .marque small { color: var(--doux); font-size: 12px; }
+  #etat-texte { font: 500 12px var(--mono); color: var(--doux); text-transform: uppercase; letter-spacing: .08em; margin-left: 10px; display: inline-flex; align-items: center; gap: 6px; }
+  #etat-texte::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--pale); }
+  body[data-etat="ecoute"] #etat-texte, body[data-etat="eveil"] #etat-texte { color: var(--accent); }
+  body[data-etat="ecoute"] #etat-texte::before, body[data-etat="eveil"] #etat-texte::before { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  body[data-etat="reflexion"] #etat-texte { color: var(--violet); }
+  body[data-etat="reflexion"] #etat-texte::before { background: var(--violet); box-shadow: 0 0 8px var(--violet); }
+  body[data-etat="parole"] #etat-texte { color: var(--ok); }
+  body[data-etat="parole"] #etat-texte::before { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .bascule.actif { color: var(--accent); border-color: var(--accent); background: var(--accent-doux); }
+  .avertissement { color: var(--danger); font-size: 13px; display: inline-flex; align-items: center; gap: 4px; }
+
+  /* Orbe */
+  .orbe { position: relative; width: var(--taille, 200px); aspect-ratio: 1; flex: none; cursor: pointer; border: 0; padding: 0; background: none; }
+  .orbe:hover { background: none; }
+  .orbe svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .orbe circle { fill: none; stroke: var(--couleur-orbe, var(--accent)); transform-origin: 100px 100px; transition: stroke .4s, opacity .4s; }
+  .orbe .a1 { stroke-width: 1.5; stroke-dasharray: 3 9; opacity: .5; animation: tourne 30s linear infinite; }
+  .orbe .a2 { stroke-width: 3; stroke-dasharray: 60 22 8 22; opacity: .65; animation: tourne 18s linear infinite reverse; }
+  .orbe .a3 { stroke-width: 1; opacity: .35; }
+  .orbe .a4 { stroke-width: 6; stroke-dasharray: 2 6; opacity: .4; animation: tourne 45s linear infinite; }
+  .orbe .coeur {
+    position: absolute; inset: 31%; border-radius: 50%;
+    background: radial-gradient(circle at 50% 45%, #fff 0, var(--couleur-orbe, var(--accent)) 28%, transparent 70%);
+    box-shadow: 0 0 calc(var(--taille, 200px) * .18) var(--couleur-orbe, var(--accent));
+    opacity: .55; animation: respire 4s ease-in-out infinite; transition: opacity .4s;
+  }
+  body[data-etat="eveil"] .orbe .coeur { opacity: .7; }
+  body[data-etat="ecoute"] .orbe { --couleur-orbe: var(--accent); }
+  body[data-etat="ecoute"] .orbe .coeur { opacity: 1; animation-duration: .9s; }
+  body[data-etat="ecoute"] .orbe .a2 { animation-duration: 5s; opacity: 1; }
+  body[data-etat="reflexion"] .orbe { --couleur-orbe: var(--violet); }
+  body[data-etat="reflexion"] .orbe .a1 { animation-duration: 4s; }
+  body[data-etat="reflexion"] .orbe .a2 { animation-duration: 2.5s; opacity: 1; }
+  body[data-etat="reflexion"] .orbe .a4 { animation-duration: 8s; }
+  body[data-etat="parole"] .orbe { --couleur-orbe: var(--ok); }
+  body[data-etat="parole"] .orbe .coeur { opacity: .95; animation: parle .45s ease-in-out infinite alternate; }
+  @keyframes tourne { to { transform: rotate(360deg); } }
+  @keyframes respire { 50% { transform: scale(.88); opacity: .4; } }
+  @keyframes parle { from { transform: scale(.82); } to { transform: scale(1.06); } }
+  @media (prefers-reduced-motion: reduce) { .orbe *, .attente .ph-duotone { animation: none !important; } }
+
+  /* Disposition */
+  main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 380px; min-height: 0; }
+  .vues { display: none; }
+  .panneau { background: rgb(11 18 24 / .7); min-height: 0; }
+
+  /* Tableau de bord */
+  #tableau { border-right: 1px solid var(--bord); overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+  .titre-section { font: 600 11.5px var(--titre); text-transform: uppercase; letter-spacing: .14em; color: var(--doux); margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }
+  .titre-section .ph-duotone { font-size: 15px; color: var(--accent); }
+  .tuiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tuile { border: 1px solid var(--bord); border-radius: 10px; padding: 10px 12px; background: var(--surface); position: relative; overflow: hidden; text-align: left; display: block; }
+  .tuile::after { content: ""; position: absolute; left: 0; top: 0; width: 2px; height: 100%; background: var(--bord-fort); }
+  .tuile.vif::after { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+  .tuile .valeur { font: 500 24px/1.1 var(--mono); }
+  .tuile .valeur small { font-size: 13px; color: var(--doux); }
+  .tuile .libelle { font-size: 12px; color: var(--doux); margin-top: 2px; }
+  .jauge { height: 4px; border-radius: 4px; background: var(--surface-3); margin-top: 8px; overflow: hidden; }
+  .jauge span { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+  .pipeline { display: flex; flex-direction: column; gap: 7px; }
+  .ligne-pipe { display: grid; grid-template-columns: 96px 1fr 26px; align-items: center; gap: 8px; font-size: 12.5px; }
+  .ligne-pipe .nom { color: var(--doux); }
+  .ligne-pipe .val { font-family: var(--mono); text-align: right; }
+  .ligne-pipe .barre { height: 6px; border-radius: 0 4px 4px 0; background: var(--accent); min-width: 2px; opacity: .85; }
+  .ligne-pipe.eteint .barre { background: var(--pale); }
+  .graphe-legende { display: flex; gap: 14px; font-size: 12px; color: var(--doux); margin-bottom: 8px; }
+  .graphe-legende i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .graphe { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; height: 96px; align-items: end; border-bottom: 1px solid var(--bord-fort); }
+  .jour { height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 2px; border-radius: 6px 6px 0 0; cursor: default; }
+  .jour:hover, .jour.survol { background: var(--surface-2); }
+  .jour span { width: 9px; border-radius: 4px 4px 0 0; min-height: 0; }
+  .jours { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; font: 11px var(--mono); color: var(--pale); text-align: center; margin-top: 4px; }
+  #lecture-graphe { font-size: 12.5px; color: var(--doux); margin-top: 6px; min-height: 19px; }
+  #lecture-graphe b { color: var(--texte); font-weight: 500; }
+  .systeme { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+  .systeme div { display: flex; align-items: center; gap: 8px; color: var(--doux); }
+  .systeme b { color: var(--texte); font-weight: 500; margin-left: auto; }
+  .systeme .ph-duotone { font-size: 16px; }
+  .ok { color: var(--ok); } .ko { color: var(--danger); }
+
+  /* Discussion */
+  #discussion { display: grid; grid-template-rows: 1fr auto; min-height: 0; }
+  #fil { overflow-y: auto; padding: 24px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .bulle { max-width: 760px; width: 100%; margin: 0 auto; }
+  .moi { background: var(--accent-doux); border: 1px solid rgb(63 208 238 / .25); border-radius: var(--rayon); padding: 10px 14px; width: auto; margin-right: 0; max-width: 600px; align-self: flex-end; }
+  .moi .ph-duotone { color: var(--accent); font-size: 14px; margin-right: 4px; vertical-align: -2px; }
+  .ia { padding: 2px 2px 2px 14px; border-left: 2px solid var(--bord-fort); }
+  .ia :first-child { margin-top: 0; } .ia :last-child { margin-bottom: 0; }
+  .ia a { color: var(--accent); }
+  .ia code { font-family: var(--mono); font-size: 13px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+  .ia table { border-collapse: collapse; } .ia td, .ia th { border: 1px solid var(--bord); padding: 4px 8px; }
+  .etape { color: var(--doux); font-size: 13px; display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12.5px; }
+  .etape .ph-duotone { font-size: 16px; color: var(--accent); flex: none; }
+  .etape span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .erreur { color: var(--danger); }
+  .attente .ph-duotone { animation: tourne 1.2s linear infinite; color: var(--violet); }
+
+  #vide { margin: auto; text-align: center; max-width: 560px; color: var(--doux); display: flex; flex-direction: column; align-items: center; }
+  #vide h2 { color: var(--texte); font: 600 24px var(--titre); letter-spacing: .02em; margin: 18px 0 6px; }
+  #briefing { margin: 0; }
+  .boutons-vide { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .principal { background: var(--accent-doux); border-color: rgb(63 208 238 / .4); color: var(--accent); }
+  .astuce { font-size: 12.5px; color: var(--pale); margin-top: 10px; }
+  kbd { font: 11.5px var(--mono); border: 1px solid var(--bord-fort); border-radius: 4px; padding: 0 5px; color: var(--doux); }
+  .idees { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 22px; width: 100%; }
+  .idees button { justify-content: flex-start; text-align: left; padding: 10px 12px; font-size: 13.5px; color: var(--doux); align-items: flex-start; }
+  .idees button:hover { color: var(--texte); }
+  .idees .ph-duotone { color: var(--accent); margin-top: 2px; flex: none; }
+
+  form { padding: 12px 20px 18px; }
+  .saisie {
+    max-width: 760px; margin: 0 auto; display: flex; gap: 8px; align-items: flex-end;
+    background: var(--surface); border: 1px solid var(--bord-fort); border-radius: var(--rayon); padding: 8px;
+  }
+  .saisie:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-doux); }
+  textarea { flex: 1; border: 0; outline: 0; resize: none; background: transparent; color: var(--texte); font: inherit; padding: 6px; max-height: 180px; }
+  textarea:focus-visible { outline: 0; }
+  .envoyer { background: var(--accent); color: #04121a; border: 0; padding: 8px 12px; }
+  .envoyer:hover { background: var(--accent); filter: brightness(1.1); }
+  #micro { padding: 8px 10px; }
+  #micro.actif { color: #04121a; background: var(--accent); border-color: var(--accent); box-shadow: 0 0 14px var(--accent-lueur); }
+
+  /* Suivi */
+  aside { border-left: 1px solid var(--bord); display: grid; grid-template-rows: auto 1fr; }
+  .onglets { display: flex; gap: 4px; padding: 10px; border-bottom: 1px solid var(--bord); }
+  .onglets button { border: 0; flex: 1; justify-content: center; font-size: 13px; color: var(--doux); padding: 6px 6px; background: none; }
+  .onglets button.actif { background: var(--accent-doux); color: var(--accent); font-weight: 600; }
+  .onglets [data-onglet="tableau"] { display: none; }
+  .compte { font: 11px var(--mono); background: var(--surface-3); border-radius: 10px; padding: 0 6px; }
+  #liste { overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .carte { border: 1px solid var(--bord); border-radius: var(--rayon); padding: 12px; font-size: 13.5px; background: var(--surface); }
+  .carte h3 { font-size: 14px; margin: 0 0 4px; }
+  .carte a { color: var(--accent); text-decoration: none; }
+  .carte a:hover { text-decoration: underline; }
+  .meta { color: var(--doux); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 4px 10px; margin-bottom: 6px; }
+  .note { color: var(--accent); letter-spacing: 1px; }
+  .carte p { margin: 6px 0 0; }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+  .brouillon { white-space: pre-wrap; background: var(--surface-2); border-radius: 8px; padding: 10px; margin-top: 6px; }
+  .rien { color: var(--doux); text-align: center; padding: 30px 10px; font-size: 14px; }
+  .entete-carte { display: flex; align-items: flex-start; gap: 8px; }
+  .entete-carte h3 { flex: 1; }
+  .statut { font-size: 11.5px; border-radius: 10px; padding: 1px 8px; background: var(--surface-3); color: var(--doux); white-space: nowrap; }
+  .statut.chaud { background: var(--accent-doux); color: var(--accent); font-weight: 600; }
+  .statut.froid { color: var(--danger); }
+  .fil { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+  .msg { border-radius: 8px; padding: 8px 10px; background: var(--surface-2); white-space: pre-wrap; font-size: 13px; }
+  .msg.recu { background: rgb(154 114 240 / .14); }
+  .msg small { display: block; color: var(--doux); margin-bottom: 4px; white-space: normal; }
+  .attente-envoi { border-color: rgb(63 208 238 / .5); }
+  .actions { display: flex; gap: 6px; margin-top: 8px; }
+  .alerte { border-color: rgb(255 122 107 / .5); }
+  .alerte h3 { color: var(--danger); display: flex; gap: 6px; align-items: center; }
+  .journal { font: 12px/1.5 var(--mono); color: var(--doux); white-space: pre-wrap; word-break: break-word; margin: 0; }
+  #liste .titre-section { margin: 6px 2px 0; }
+  #liste .bloc-tableau { display: flex; flex-direction: column; gap: 18px; }
+
+  /* Fenêtres et notifications */
+  dialog { width: min(820px, 92vw); max-height: 86vh; border: 1px solid var(--bord-fort); border-radius: var(--rayon); background: var(--surface); color: var(--texte); padding: 0; }
+  dialog::backdrop { background: rgb(0 0 0 / .6); backdrop-filter: blur(2px); }
+  .entete-dialog { display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--bord); position: sticky; top: 0; background: var(--surface); }
+  #rapport { padding: 8px 24px 24px; }
+  #fenetre-voix { width: min(460px, 92vw); }
+  .reglages-voix { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .reglages-voix label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--doux); }
+  .reglages-voix select, .reglages-voix input[type=text] { background: var(--surface-2); border: 1px solid var(--bord-fort); border-radius: 8px; padding: 8px; }
+  .reglages-voix .aide { font-size: 12px; color: var(--pale); margin: 0; }
+  #notifications { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 10; max-width: min(360px, calc(100vw - 32px)); }
+  .notif { background: var(--surface-2); border: 1px solid var(--bord-fort); border-left: 3px solid var(--accent); border-radius: 10px; padding: 10px 14px; font-size: 13.5px; box-shadow: 0 8px 30px rgb(0 0 0 / .4); display: flex; gap: 8px; align-items: flex-start; animation: entre .25s ease-out; }
+  .notif .ph-duotone { color: var(--accent); margin-top: 1px; }
+  @keyframes entre { from { transform: translateY(8px); opacity: 0; } }
+
+  @media (max-width: 1280px) {
+    main { grid-template-columns: minmax(0, 1fr) 380px; }
+    #tableau { display: none; }
+    .onglets [data-onglet="tableau"] { display: inline-flex; }
+  }
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+    header { padding: 8px 12px; gap: 4px; }
+    header > button:not(.orbe), .vues button { padding: 6px 8px; }
+    .etiquette, #etat-texte, .marque { display: none; }
+    .vues { display: flex; gap: 4px; }
+    .vues button.actif { background: var(--accent-doux); color: var(--accent); }
+    main[data-vue="chat"] aside, main[data-vue="suivi"] #discussion { display: none; }
+    aside { border-left: 0; }
+    .onglets { overflow-x: auto; }
+    .onglets button { flex: none; }
+    #fil, form { padding-left: 16px; padding-right: 16px; }
+    .idees { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body data-etat="veille">
+<header>
+  <button class="orbe" id="mini-orbe" style="--taille: 34px" aria-label="Parler à l'assistant" title="Parler (Ctrl+M)">
+    <svg viewBox="0 0 200 200" aria-hidden="true"><circle class="a1" cx="100" cy="100" r="96"/><circle class="a2" cx="100" cy="100" r="80"/></svg>
+    <span class="coeur"></span>
+  </button>
+  <div class="marque"><strong id="nom-assistant">JARVIS</strong><small id="sous-titre">Agent freelance</small></div>
+  <span id="etat-texte" aria-live="polite">En veille</span>
+  <div class="espace"></div>
+  <div class="vues">
+    <button data-vue="chat" class="actif" aria-label="Discussion"><i class="ph-duotone ph-chat-circle-text"></i></button>
+    <button data-vue="suivi" aria-label="Suivi"><i class="ph-duotone ph-squares-four"></i></button>
+  </div>
+  <span class="avertissement" id="sans-email" hidden><i class="ph-duotone ph-warning"></i><span class="etiquette">Email non configuré</span></span>
+  <button id="mains-libres" class="bascule" title="Mains libres : dis le mot d'éveil pour me parler"><i class="ph-duotone ph-ear"></i><span class="etiquette">Mains libres</span></button>
+  <button id="ouvrir-voix" title="Réglages de la voix" aria-label="Réglages de la voix"><i class="ph-duotone ph-sliders-horizontal"></i></button>
+  <button id="mode" class="bascule" title="Changer le mode d'envoi"></button>
+  <button id="tournee" title="Lire les réponses, relancer et prospecter maintenant"><i class="ph-duotone ph-arrows-clockwise"></i><span class="etiquette">Tournée</span></button>
+  <button id="nouveau" title="Nouvelle conversation" aria-label="Nouvelle conversation"><i class="ph-duotone ph-arrow-counter-clockwise"></i></button>
+</header>
+
+<main data-vue="chat">
+  <section id="tableau" class="panneau" aria-label="Tableau de bord"></section>
+
+  <section id="discussion">
+    <div id="fil">
+      <div id="vide">
+        <button class="orbe" id="grand-orbe" aria-label="Parler à l'assistant">
+          <svg viewBox="0 0 200 200" aria-hidden="true">
+            <circle class="a4" cx="100" cy="100" r="98"/>
+            <circle class="a1" cx="100" cy="100" r="88"/>
+            <circle class="a2" cx="100" cy="100" r="74"/>
+            <circle class="a3" cx="100" cy="100" r="60"/>
+          </svg>
+          <span class="coeur"></span>
+        </button>
+        <h2 id="salut">Bonjour.</h2>
+        <p id="briefing">Je charge ton tableau de bord…</p>
+        <div class="boutons-vide">
+          <button class="principal" id="point-du-jour"><i class="ph-duotone ph-speaker-high"></i> Écouter le point du jour</button>
+          <button id="parler-vide"><i class="ph-duotone ph-microphone"></i> Parler</button>
+        </div>
+        <p class="astuce" id="astuce-voix">Touche l'orbe ou <kbd>Ctrl</kbd> + <kbd>M</kbd> pour parler · <kbd>Échap</kbd> pour me couper</p>
+        <div class="idees">
+          <button><i class="ph-duotone ph-briefcase"></i> Trouve-moi 5 missions de développement web récentes qui collent à mon profil</button>
+          <button><i class="ph-duotone ph-globe-hemisphere-east"></i> Trouve 5 entreprises à Dakar et Abidjan dont le site est à refaire, et écris-leur</button>
+          <button><i class="ph-duotone ph-chats-circle"></i> Fais le point sur mes clients : qui a répondu, qui relancer ?</button>
+          <button><i class="ph-duotone ph-clipboard-text"></i> Fais un audit complet de https://exemple.fr</button>
+        </div>
+      </div>
+    </div>
+    <form id="formulaire">
+      <div class="saisie">
+        <textarea id="message" rows="1" placeholder="Ta demande, ou touche le micro…"></textarea>
+        <button type="button" id="micro" aria-label="Dicter" title="Dicter (Ctrl+M)"><i class="ph-duotone ph-microphone"></i></button>
+        <button class="envoyer" id="envoyer" aria-label="Envoyer"><i class="ph-duotone ph-paper-plane-tilt"></i></button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="panneau">
+    <div class="onglets">
+      <button data-onglet="tableau">Tableau</button>
+      <button data-onglet="prospects" class="actif">Clients <span class="compte" id="n-prospects">0</span></button>
+      <button data-onglet="missions">Missions <span class="compte" id="n-missions">0</span></button>
+      <button data-onglet="audits">Audits <span class="compte" id="n-audits">0</span></button>
+      <button data-onglet="activite">Activité <span class="compte" id="n-activite">0</span></button>
+    </div>
+    <div id="liste"></div>
+  </aside>
+</main>
+
+<dialog id="fenetre">
+  <div class="entete-dialog">
+    <strong id="titre-rapport"></strong><div class="espace"></div>
+    <button onclick="fenetre.close()" aria-label="Fermer"><i class="ph-duotone ph-x"></i></button>
+  </div>
+  <div id="rapport" class="ia"></div>
+</dialog>
+
+<dialog id="fenetre-voix">
+  <div class="entete-dialog">
+    <strong>Voix</strong><div class="espace"></div>
+    <button onclick="this.closest('dialog').close()" aria-label="Fermer"><i class="ph-duotone ph-x"></i></button>
+  </div>
+  <div class="reglages-voix">
+    <label>Me répondre à voix haute
+      <select id="r-parler">
+        <option value="voix">Quand je parle</option>
+        <option value="toujours">Toujours</option>
+        <option value="jamais">Jamais</option>
+      </select>
+    </label>
+    <label>Voix
+      <select id="r-voix"></select>
+    </label>
+    <label>Vitesse <input type="range" id="r-vitesse" min="0.8" max="1.4" step="0.05"></label>
+    <label>Mot d'éveil (mode mains libres)
+      <input type="text" id="r-eveil" maxlength="20">
+    </label>
+    <p class="aide">Les voix « Natural » d'Edge (Henri, Denise) sont les plus naturelles. La reconnaissance vocale passe par le service de ton navigateur (Google pour Chrome, Microsoft pour Edge) et ne marche pas dans Firefox.</p>
+    <div class="actions"><button id="r-tester"><i class="ph-duotone ph-play"></i> Tester</button></div>
+  </div>
+</dialog>
+
+<div id="notifications" aria-live="polite"></div>
+
+<script>
+const session = crypto.randomUUID();
+const fil = document.getElementById("fil");
+const champ = document.getElementById("message");
+const bouton = document.getElementById("envoyer");
+let suivi = { missions: [], prospects: [], audits: [], alertes: [], envois: [], journal: [], reglages: {}, stats: null };
+let onglet = "prospects";
+const ouverts = new Set(); // conversations dépliées, gardées ouvertes entre deux rafraîchissements
+let occupe = false;        // l'agent travaille sur une demande
+let recusConnus = null;    // pour annoncer les nouvelles réponses de clients
+
+const md = (texte) => DOMPurify.sanitize(marked.parse(texte));
+const echapper = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const lien = (url) => /^https?:\/\//.test(url) ? url : "#";
+const pl = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
+
+/* ---------- Réglages de la voix (gardés dans ce navigateur) ---------- */
+const reglages = Object.assign({ parler: "voix", voix: "", vitesse: 1.05, eveil: "Jarvis", mainsLibres: false }, (() => {
+  try { return JSON.parse(localStorage.getItem("jarvis-voix") || "{}"); } catch { return {}; }
+})());
+function sauverReglages() { try { localStorage.setItem("jarvis-voix", JSON.stringify(reglages)); } catch {} }
+
+/* ---------- États de l'assistant ---------- */
+const LIBELLES = { veille: "En veille", eveil: "", ecoute: "J'écoute…", reflexion: "Je réfléchis…", parole: "Je parle" };
+function etat(e) {
+  document.body.dataset.etat = e;
+  document.getElementById("etat-texte").textContent = e === "eveil" ? `Dis « ${reglages.eveil} »` : LIBELLES[e];
+}
+function repos() {
+  if (occupe) return etat("reflexion");
+  if (speechSynthesis.speaking) return etat("parole");
+  etat(reglages.mainsLibres ? "eveil" : "veille");
+  demarrerEveil();
+}
+
+function notifier(texte, icone = "ph-bell-ringing") {
+  const el = document.createElement("div");
+  el.className = "notif";
+  el.innerHTML = `<i class="ph-duotone ${icone}"></i><span>${echapper(texte)}</span>`;
+  document.getElementById("notifications").appendChild(el);
+  setTimeout(() => el.remove(), 7000);
+}
+
+/* ---------- Synthèse vocale ---------- */
+let voixDispo = [];
+function chargerVoix() {
+  voixDispo = speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith("fr"));
+  const rang = (v) => (/natural|online/i.test(v.name) ? 0 : /google/i.test(v.name) ? 1 : 2) + (/henri|paul|claude|remy|rémy/i.test(v.name) ? -0.5 : 0);
+  voixDispo.sort((a, b) => rang(a) - rang(b));
+  const choix = document.getElementById("r-voix");
+  choix.innerHTML = voixDispo.map((v) => `<option value="${echapper(v.name)}">${echapper(v.name.replace(/^Microsoft /, ""))}</option>`).join("")
+    || `<option value="">Aucune voix française trouvée</option>`;
+  choix.value = voixDispo.some((v) => v.name === reglages.voix) ? reglages.voix : (voixDispo[0]?.name || "");
+}
+speechSynthesis.addEventListener?.("voiceschanged", chargerVoix);
+chargerVoix();
+
+function pourLaVoix(texte) {
+  return texte
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/^\s*\|.*\|\s*$/gm, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/^#+\s*/gm, "").replace(/^\s*(?:[-*•]|\d+\.)\s+/gm, "")
+    .replace(/[*_`>~]/g, "")
+    .replace(/([^.!?:;])\s*\n+/g, "$1. ").replace(/\n+/g, " ")
+    .replace(/\s+/g, " ").trim();
+}
+
+function parler(texte) {
+  let propre = pourLaVoix(texte);
+  if (!propre) return;
+  const MAX = 650;
+  if (propre.length > MAX) {
+    const coupe = propre.slice(0, MAX).match(/^[\s\S]*[.!?…](?=\s)/)?.[0] || propre.slice(0, MAX);
+    propre = coupe + " Le détail est à l'écran.";
+  }
+  arreterEveil();
+  // Des phrases courtes : Chrome coupe les longues lectures au bout d'une quinzaine de secondes
+  const phrases = propre.match(/[^.!?…]+[.!?…]*\s*/g) || [propre];
+  const voix = voixDispo.find((v) => v.name === reglages.voix) || voixDispo[0];
+  phrases.forEach((p, i) => {
+    const u = new SpeechSynthesisUtterance(p.trim());
+    u.lang = voix?.lang || "fr-FR"; u.voice = voix || null; u.rate = Number(reglages.vitesse) || 1;
+    u.onstart = () => etat("parole");
+    if (i === phrases.length - 1) { u.onend = () => setTimeout(repos, 150); u.onerror = () => setTimeout(repos, 150); }
+    speechSynthesis.speak(u);
+  });
+}
+function taire() { speechSynthesis.cancel(); setTimeout(repos, 100); }
+const doitParler = (parVoix) => reglages.parler === "toujours" || (reglages.parler === "voix" && parVoix);
+
+function bip(frequence = 880) {
+  try {
+    const ctx = new AudioContext(), o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = frequence; o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(.0001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(.12, ctx.currentTime + .02);
+    g.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime + .18);
+    o.start(); o.stop(ctx.currentTime + .2);
+  } catch {}
+}
+
+/* ---------- Reconnaissance vocale ---------- */
+const Reco = window.SpeechRecognition || window.webkitSpeechRecognition;
+let commande = null; // écoute d'une demande
+let eveil = null;    // écoute continue du mot d'éveil
+
+function majMicro() {
+  document.getElementById("micro").classList.toggle("actif", !!commande);
+  document.getElementById("mains-libres").classList.toggle("actif", reglages.mainsLibres);
+}
+
+function ecouterCommande() {
+  if (!Reco) return notifier("La reconnaissance vocale demande Chrome ou Edge.", "ph-microphone-slash");
+  if (commande) return commande.stop();
+  if (occupe) return notifier("Je termine d'abord la demande en cours.", "ph-hourglass");
+  speechSynthesis.cancel();
+  arreterEveil();
+  const r = new Reco();
+  r.lang = "fr-FR"; r.interimResults = true; r.continuous = false;
+  let final = "";
+  r.onresult = (e) => {
+    let provisoire = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else provisoire += e.results[i][0].transcript;
+    }
+    champ.value = (final + provisoire).trim(); ajuster();
+  };
+  r.onerror = (e) => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") notifier("Accès au micro refusé : autorise-le dans la barre d'adresse.", "ph-microphone-slash");
+    else if (e.error === "network") notifier("Reconnaissance vocale indisponible : pas de connexion au service du navigateur.", "ph-wifi-slash");
+  };
+  r.onend = () => {
+    commande = null; majMicro();
+    if (final.trim()) traiter(final.trim(), true);
+    else { champ.value = ""; ajuster(); repos(); }
+  };
+  commande = r; r.start(); bip(); etat("ecoute"); majMicro();
+}
+
+const sansAccent = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, "");
+
+function entendre(phrase) {
+  const mots = phrase.trim().split(/\s+/), cible = sansAccent(reglages.eveil);
+  let fin = -1;
+  for (let i = 0; i < mots.length && fin < 0; i++) {
+    if (sansAccent(mots[i]) === cible) fin = i + 1;
+    else if (sansAccent(mots[i] + (mots[i + 1] || "")) === cible) fin = i + 2;
+  }
+  if (fin < 0) return;
+  const suite = mots.slice(fin).join(" ").replace(/^[,.\s]+/, "");
+  if (suite.length > 2) { bip(); traiter(suite, true); }
+  else ecouterCommande();
+}
+
+function demarrerEveil() {
+  if (!Reco || !reglages.mainsLibres || eveil || commande || occupe || speechSynthesis.speaking) return;
+  const r = new Reco();
+  r.lang = "fr-FR"; r.continuous = true; r.interimResults = false;
+  r.onresult = (e) => {
+    for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) entendre(e.results[i][0].transcript);
+  };
+  r.onerror = (e) => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      reglages.mainsLibres = false; sauverReglages(); majMicro(); repos();
+      notifier("Accès au micro refusé : le mode mains libres est coupé.", "ph-microphone-slash");
+    }
+  };
+  r.onend = () => { if (eveil === r) { eveil = null; setTimeout(demarrerEveil, 400); } };
+  eveil = r;
+  try { r.start(); } catch { eveil = null; }
+}
+function arreterEveil() {
+  const r = eveil; eveil = null;
+  if (r) { r.onend = null; try { r.abort(); } catch {} }
+}
+
+/* Commandes vocales traitées sur place, sans appel à l'API */
+async function traiter(texte, parVoix) {
+  const t = sansAccent(texte);
+  if (/^(stop|silence|taistoi|arrete|arretetoi|chut)$/.test(t)) { champ.value = ""; ajuster(); return taire(); }
+  if (t.length < 30 && /pointdujour|briefing|quoideneuf/.test(t)) { ajouter("moi", `<i class="ph-duotone ph-microphone"></i>${echapper(texte)}`); const b = briefing(); ajouter("ia", md(b)); champ.value = ""; ajuster(); parler(b); return; }
+  if (t.length < 30 && /lance(r)?(la|une)tournee/.test(t)) {
+    champ.value = ""; ajuster();
+    const rep = await fetch("/api/tournee", { method: "POST" });
+    const msg = rep.ok ? ((await rep.json()).lancee ? "Je lance la tournée." : "Une tournée est déjà en cours.") : (await rep.json()).detail;
+    notifier(msg, "ph-arrows-clockwise"); if (doitParler(parVoix)) parler(msg); charger(); return;
+  }
+  envoyer(texte, parVoix);
+}
+
+/* ---------- Point du jour (calculé sur place) ---------- */
+function briefing() {
+  const s = suivi.stats;
+  if (!s) return "Je n'arrive pas à lire le suivi pour l'instant.";
+  const h = new Date().getHours();
+  const prenom = (suivi.expediteur || "").split(" ")[0];
+  const phrases = [`${h >= 18 || h < 5 ? "Bonsoir" : "Bonjour"}${prenom ? " " + prenom : ""}.`];
+  if (suivi.envois.length) phrases.push(`${pl(suivi.envois.length, "email attend", "emails attendent")} ta validation.`);
+  if (s.recus_24h) phrases.push(`${s.recus_24h > 1 ? `${s.recus_24h} clients ont` : "Un client a"} répondu ces dernières 24 heures.`);
+  const chauds = s.par_statut["en discussion"] + s.par_statut["rendez-vous"];
+  if (chauds) phrases.push(`${pl(chauds, "conversation est", "conversations sont")} en cours.`);
+  phrases.push(s.envois_du_jour ? `J'ai envoyé ${pl(s.envois_du_jour, "email", "emails")} aujourd'hui, sur ${s.envois_max} autorisés.` : "Aucun email envoyé aujourd'hui.");
+  if (s.a_relancer) phrases.push(`${pl(s.a_relancer, "client est à relancer", "clients sont à relancer")}.`);
+  phrases.push(`Tu suis ${pl(suivi.prospects.length, "client", "clients")} et ${pl(suivi.missions.length, "mission", "missions")}.`);
+  if (!suivi.reglages.email_configure) phrases.push("Attention : l'email n'est pas configuré.");
+  return phrases.join(" ");
+}
+
+/* ---------- Discussion ---------- */
+function ajouter(classe, html) {
+  document.getElementById("vide")?.remove();
+  const el = document.createElement("div");
+  el.className = "bulle " + classe;
+  el.innerHTML = html;
+  fil.appendChild(el);
+  fil.scrollTop = fil.scrollHeight;
+  return el;
+}
+
+function icone(texte) {
+  if (texte.startsWith("Recherche")) return "ph-magnifying-glass";
+  if (texte.startsWith("Lecture")) return "ph-globe";
+  if (texte.startsWith("Audit")) return "ph-gauge";
+  if (texte.startsWith("Email")) return "ph-envelope-simple";
+  if (texte.startsWith("Alerte")) return "ph-bell-ringing";
+  if (texte.includes("enregistr") || texte.includes("sauvegard")) return "ph-floppy-disk";
+  return "ph-list-checks";
+}
+
+async function envoyer(texte, parVoix = false) {
+  if (!texte.trim() || occupe) return;
+  ajouter("moi", (parVoix ? '<i class="ph-duotone ph-microphone"></i>' : "") + echapper(texte));
+  champ.value = ""; ajuster();
+  occupe = true; bouton.disabled = true; arreterEveil(); etat("reflexion");
+  const attente = ajouter("etape attente", '<i class="ph-duotone ph-circle-notch"></i><span>Je réfléchis…</span>');
+  const avant = (el) => { fil.insertBefore(el, attente); fil.scrollTop = fil.scrollHeight; };
+
+  try {
+    const rep = await fetch("/api/chat", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session, message: texte, voix: parVoix }),
+    });
+    const lecteur = rep.body.getReader();
+    const decodeur = new TextDecoder();
+    let tampon = "";
+    while (true) {
+      const { value, done } = await lecteur.read();
+      if (done) break;
+      tampon += decodeur.decode(value, { stream: true });
+      const morceaux = tampon.split("\n\n");
+      tampon = morceaux.pop();
+      for (const m of morceaux) {
+        if (!m.startsWith("data: ")) continue;
+        const ev = JSON.parse(m.slice(6));
+        if (ev.type === "outil") {
+          avant(Object.assign(document.createElement("div"), {
+            className: "bulle etape",
+            innerHTML: `<i class="ph-duotone ${icone(ev.contenu)}"></i><span>${echapper(ev.contenu)}</span>`,
+          }));
+          if (/enregistr|sauvegard|^Email|^Statut|^Alerte/.test(ev.contenu)) charger();
+        } else if (ev.type === "texte") {
+          avant(Object.assign(document.createElement("div"), { className: "bulle ia", innerHTML: md(ev.contenu) }));
+          if (doitParler(parVoix)) parler(ev.contenu);
+        } else if (ev.type === "erreur") {
+          avant(Object.assign(document.createElement("div"), { className: "bulle erreur", textContent: ev.contenu }));
+          if (doitParler(parVoix)) parler("Désolé, une erreur est survenue. Le détail est à l'écran.");
+        }
+      }
+    }
+  } catch (e) {
+    ajouter("erreur", "Connexion au serveur perdue : " + echapper(e.message));
+  } finally {
+    attente.remove();
+    occupe = false; bouton.disabled = false;
+    champ.focus();
+    repos();
+    charger();
+  }
+}
+
+/* ---------- Suivi et tableau de bord ---------- */
+async function charger() {
+  try { suivi = await (await fetch("/api/suivi")).json(); } catch { return; }
+  document.getElementById("n-prospects").textContent = suivi.prospects.length;
+  document.getElementById("n-missions").textContent = suivi.missions.length;
+  document.getElementById("n-audits").textContent = suivi.audits.length;
+  document.getElementById("n-activite").textContent = suivi.alertes.length;
+  const r = suivi.reglages, auto = r.MODE_ENVOI === "auto";
+  const mode = document.getElementById("mode");
+  mode.classList.toggle("actif", auto);
+  mode.innerHTML = `<i class="ph-duotone ${auto ? "ph-lightning" : "ph-hand"}"></i><span class="etiquette">${auto ? "Envoi auto" : "Je valide"}</span>`;
+  document.getElementById("sans-email").hidden = r.email_configure;
+  const tournee = document.getElementById("tournee");
+  tournee.disabled = r.en_cours;
+  tournee.querySelector("i").className = "ph-duotone " + (r.en_cours ? "ph-circle-notch" : "ph-arrows-clockwise");
+  if (suivi.expediteur) document.getElementById("sous-titre").textContent = "Agent freelance de " + suivi.expediteur.split(" ")[0];
+
+  // Nouvelles réponses de clients depuis le dernier passage
+  const recus = suivi.prospects.flatMap((p) => (p.fil || []).filter((m) => m.sens === "reçu").map((m) => ({ nom: p.nom, ...m })));
+  if (recusConnus !== null && recus.length > recusConnus) {
+    for (const m of recus.sort((a, b) => a.date.localeCompare(b.date)).slice(recusConnus - recus.length)) {
+      const msg = `${m.nom} vient de répondre.`;
+      notifier(msg, "ph-envelope-open");
+      if (reglages.mainsLibres || reglages.parler === "toujours") parler(msg);
+    }
+  }
+  recusConnus = recus.length;
+
+  if (document.getElementById("vide")) {
+    const h = new Date().getHours(), prenom = (suivi.expediteur || "").split(" ")[0];
+    document.getElementById("salut").textContent = `${h >= 18 || h < 5 ? "Bonsoir" : "Bonjour"}${prenom ? " " + prenom : ""}.`;
+    document.getElementById("briefing").textContent = briefing().replace(/^\S+( \S+)?\.\s*/, "");
+  }
+  document.getElementById("tableau").innerHTML = tableauHtml();
+  afficher();
+}
+
+const JOURS = ["D", "L", "M", "M", "J", "V", "S"];
+function tableauHtml() {
+  const s = suivi.stats;
+  if (!s) return "";
+  const r = suivi.reglages;
+  const taux = s.contactes ? Math.round((100 * s.ont_repondu) / s.contactes) : 0;
+  const tuile = (valeur, libelle, vif, extra = "") => `<div class="tuile ${vif ? "vif" : ""}"><div class="valeur">${valeur}</div><div class="libelle">${libelle}</div>${extra}</div>`;
+  const tuiles = [
+    tuile(`${s.envois_du_jour}<small>/${s.envois_max}</small>`, "Emails aujourd'hui", false,
+      `<div class="jauge"><span style="width:${Math.min(100, (100 * s.envois_du_jour) / (s.envois_max || 1))}%"></span></div>`),
+    tuile(suivi.envois.length, "À valider", suivi.envois.length > 0),
+    tuile(s.recus_24h, "Réponses en 24 h", s.recus_24h > 0),
+    tuile(s.a_relancer, "Relances dues", s.a_relancer > 0),
+    tuile(`${taux}<small>%</small>`, `Taux de réponse · ${s.ont_repondu} sur ${s.contactes}`),
+    tuile(suivi.missions.length, "Missions repérées"),
+  ].join("");
+
+  const max = Math.max(1, ...Object.values(s.par_statut));
+  const pipeline = Object.entries(s.par_statut).map(([statut, n]) => `<div class="ligne-pipe ${["perdu", "stop"].includes(statut) ? "eteint" : ""}">
+    <span class="nom">${echapper(statut)}</span><span class="barre" style="width:${n ? (100 * n) / max : 0}%"></span><span class="val">${n}</span></div>`).join("");
+
+  const haut = Math.max(1, ...s.semaine.flatMap((j) => [j.envoyes, j.recus]));
+  const barres = s.semaine.map((j, i) => `<div class="jour" data-i="${i}">
+    <span style="height:${(100 * j.envoyes) / haut}%;background:var(--serie-envoyes)"></span>
+    <span style="height:${(100 * j.recus) / haut}%;background:var(--serie-recus)"></span></div>`).join("");
+  const etiquettes = s.semaine.map((j) => `<span>${JOURS[new Date(j.jour + "T12:00").getDay()]}</span>`).join("");
+
+  const ligne = (icone, libelle, valeur, ok) => `<div><i class="ph-duotone ${icone} ${ok === undefined ? "" : ok ? "ok" : "ko"}"></i>${libelle}<b>${valeur}</b></div>`;
+  return `
+    <div><div class="titre-section"><i class="ph-duotone ph-gauge"></i>Aujourd'hui</div><div class="tuiles">${tuiles}</div></div>
+    <div><div class="titre-section"><i class="ph-duotone ph-funnel"></i>Pipeline clients</div><div class="pipeline">${pipeline}</div></div>
+    <div><div class="titre-section"><i class="ph-duotone ph-chart-bar"></i>7 derniers jours</div>
+      <div class="graphe-legende"><span><i style="background:var(--serie-envoyes)"></i>Envoyés</span><span><i style="background:var(--serie-recus)"></i>Reçus</span></div>
+      <div class="graphe" role="img" aria-label="Emails envoyés et reçus sur 7 jours">${barres}</div>
+      <div class="jours">${etiquettes}</div>
+      <div id="lecture-graphe">${lectureSemaine()}</div></div>
+    <div><div class="titre-section"><i class="ph-duotone ph-cpu"></i>Système</div><div class="systeme">
+      ${ligne(r.MODE_ENVOI === "auto" ? "ph-lightning" : "ph-hand", "Envoi", r.MODE_ENVOI === "auto" ? "automatique" : "je valide")}
+      ${ligne("ph-envelope-simple", "Email", r.email_configure ? "configuré" : "à configurer", r.email_configure)}
+      ${ligne("ph-arrows-clockwise", "Tournée", r.en_cours ? "en cours" : r.TOURNEE_AUTO === "oui" ? "auto" : "manuelle")}
+      ${ligne(Reco ? "ph-microphone" : "ph-microphone-slash", "Voix", Reco ? (reglages.mainsLibres ? "mains libres" : "prête") : "navigateur non compatible", !!Reco)}
+    </div></div>`;
+}
+
+function lectureSemaine(i) {
+  const sem = suivi.stats?.semaine || [];
+  if (i === undefined) {
+    const e = sem.reduce((a, j) => a + j.envoyes, 0), r = sem.reduce((a, j) => a + j.recus, 0);
+    return `Sur 7 jours : <b>${pl(e, "envoyé", "envoyés")}</b> · <b>${pl(r, "reçu", "reçus")}</b>`;
+  }
+  const j = sem[i];
+  const d = new Date(j.jour + "T12:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  return `${d} : <b>${pl(j.envoyes, "envoyé", "envoyés")}</b> · <b>${pl(j.recus, "reçu", "reçus")}</b>`;
+}
+document.addEventListener("mouseover", (e) => {
+  const jour = e.target.closest?.(".jour");
+  const lecture = e.target.closest?.(".graphe")?.parentElement.querySelector("#lecture-graphe");
+  if (lecture) lecture.innerHTML = lectureSemaine(jour ? Number(jour.dataset.i) : undefined);
+});
+document.addEventListener("mouseout", (e) => {
+  if (e.target.closest?.(".graphe") && !e.relatedTarget?.closest?.(".graphe")) {
+    const lecture = e.target.closest(".graphe").parentElement.querySelector("#lecture-graphe");
+    if (lecture) lecture.innerHTML = lectureSemaine();
+  }
+});
+
+const date = (d) => echapper((d || "").slice(0, 16).replace("T", " à "));
+const CHAUDS = ["en discussion", "rendez-vous", "gagné"];
+
+function carteProspect(p) {
+  const classe = CHAUDS.includes(p.statut) ? "chaud" : ["stop", "perdu"].includes(p.statut) ? "froid" : "";
+  const fil = (p.fil || []).map((m) => `<div class="msg ${m.sens === "reçu" ? "recu" : ""}">
+    <small>${m.sens === "reçu" ? "Reçu" : "Envoyé"} · ${date(m.date)} · ${echapper(m.sujet)}</small>${echapper(m.texte)}</div>`).join("");
+  const id = p.email || p.site;
+  return `<div class="carte">
+    <div class="entete-carte"><h3>${echapper(p.nom)}</h3><span class="statut ${classe}">${echapper(p.statut)}</span></div>
+    <div class="meta"><span>${echapper([p.secteur, p.ville, p.pays].filter(Boolean).join(" · "))}</span>
+      ${p.site ? `<a href="${echapper(lien(p.site))}" target="_blank" rel="noopener">${echapper(p.site.replace(/^https?:\/\//, ""))}</a>` : "<span>sans site</span>"}</div>
+    <div class="meta">${p.email ? `<span>${echapper(p.email)}</span>` : ""}${p.autres_contacts ? `<span>${echapper(p.autres_contacts)}</span>` : ""}
+      ${p.relances ? `<span>${p.relances} relance(s)</span>` : ""}</div>
+    <p>${echapper(p.problemes)}</p>
+    ${fil ? `<details data-id="${echapper(id)}" ${ouverts.has(id) ? "open" : ""}><summary>Conversation (${p.fil.length})</summary><div class="fil">${fil}</div></details>`
+      : p.message ? `<details><summary>Ancien brouillon d'approche</summary><div class="brouillon">${echapper(p.message)}</div></details>` : ""}
+  </div>`;
+}
+
+function afficher() {
+  const liste = document.getElementById("liste");
+  let html = "";
+  if (onglet === "tableau") {
+    html = `<div class="bloc-tableau">${tableauHtml()}</div>`;
+  } else if (onglet === "prospects") {
+    if (suivi.envois.length) {
+      html += `<div class="titre-section">À valider</div>` + suivi.envois.map((e) => `<div class="carte attente-envoi">
+        <h3>${echapper(e.sujet)}</h3><div class="meta"><span>${echapper(e.email)}</span><span>${echapper(e.type.replace("_", " "))}</span></div>
+        <div class="brouillon">${echapper(e.texte)}</div>
+        <div class="actions"><button data-envoi="${e.id}" data-action="envoyer"><i class="ph-duotone ph-paper-plane-tilt"></i> Envoyer</button>
+        <button data-envoi="${e.id}" data-action="supprimer"><i class="ph-duotone ph-trash"></i> Supprimer</button></div></div>`).join("");
+      html += `<div class="titre-section">Clients</div>`;
+    }
+    const tri = (p) => [...(p.fil || [])].pop()?.date || p.ajoute_le || "";
+    html += [...suivi.prospects].sort((a, b) => tri(b).localeCompare(tri(a))).map(carteProspect).join("");
+  } else if (onglet === "missions") {
+    html = [...suivi.missions].reverse().map((e) => `<div class="carte">
+      <h3><a href="${echapper(lien(e.url))}" target="_blank" rel="noopener">${echapper(e.titre)}</a></h3>
+      <div class="meta"><span>${echapper(e.plateforme)}</span>${e.budget ? `<span>${echapper(e.budget)}</span>` : ""}
+        <span class="note" title="Pertinence">${"●".repeat(e.pertinence)}${"○".repeat(Math.max(0, 5 - e.pertinence))}</span></div>
+      <p>${echapper(e.resume)}</p><p style="color:var(--doux)">${echapper(e.pourquoi)}</p></div>`).join("");
+  } else if (onglet === "audits") {
+    html = suivi.audits.map((e) => `<div class="carte"><h3><a href="#" data-audit="${echapper(e.fichier)}">${echapper(e.fichier.replace(/\.md$/, ""))}</a></h3>
+      <div class="meta">${date(e.date)}</div></div>`).join("");
+  } else {
+    html = [...suivi.alertes].reverse().slice(0, 30).map((a) => `<div class="carte alerte">
+      <h3><i class="ph-duotone ph-bell-ringing"></i> ${echapper(a.titre)}</h3><div class="meta">${date(a.date)}</div>
+      <p style="white-space:pre-wrap">${echapper(a.details)}</p></div>`).join("");
+    if (suivi.journal.length) html += `<div class="titre-section">Journal</div><div class="carte"><pre class="journal">${echapper([...suivi.journal].reverse().join("\n"))}</pre></div>`;
+  }
+  liste.innerHTML = html || `<div class="rien">Rien pour l'instant.</div>`;
+}
+
+document.getElementById("liste").addEventListener("toggle", (ev) => {
+  const id = ev.target.dataset?.id;
+  if (id) ev.target.open ? ouverts.add(id) : ouverts.delete(id);
+}, true);
+
+document.getElementById("liste").addEventListener("click", async (ev) => {
+  const audit = ev.target.closest("[data-audit]");
+  const envoi = ev.target.closest("[data-envoi]");
+  if (audit) {
+    ev.preventDefault();
+    const texte = await (await fetch("/api/audits/" + encodeURIComponent(audit.dataset.audit))).text();
+    document.getElementById("titre-rapport").textContent = audit.textContent;
+    document.getElementById("rapport").innerHTML = md(texte);
+    document.getElementById("fenetre").showModal();
+  }
+  if (envoi) {
+    envoi.disabled = true;
+    const rep = await fetch(`/api/envois/${envoi.dataset.envoi}/${envoi.dataset.action}`, { method: "POST" });
+    if (!rep.ok) alert((await rep.json()).detail || "Envoi impossible.");
+    charger();
+  }
+});
+
+/* ---------- Boutons et raccourcis ---------- */
+document.getElementById("mode").addEventListener("click", async () => {
+  const auto = suivi.reglages.MODE_ENVOI === "auto";
+  const question = auto
+    ? "Passer en validation ? Les emails attendront ton accord avant de partir."
+    : "Passer en envoi automatique ? L'agent écrira, répondra et relancera seul.";
+  if (!confirm(question)) return;
+  await fetch("/api/reglages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ MODE_ENVOI: auto ? "validation" : "auto" }) });
+  charger();
+});
+document.getElementById("tournee").addEventListener("click", () => traiter("lance la tournée", false));
+setInterval(charger, 15000);
+
+document.querySelectorAll("[data-onglet]").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll("[data-onglet]").forEach((x) => x.classList.toggle("actif", x === b));
+  onglet = b.dataset.onglet; afficher();
+}));
+document.querySelectorAll("[data-vue]").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll("[data-vue]").forEach((x) => x.classList.toggle("actif", x === b));
+  document.querySelector("main").dataset.vue = b.dataset.vue;
+}));
+document.querySelectorAll(".idees button").forEach((b) => b.addEventListener("click", () => envoyer(b.textContent.trim())));
+document.getElementById("formulaire").addEventListener("submit", (e) => { e.preventDefault(); traiter(champ.value, false); });
+champ.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); traiter(champ.value, false); } });
+function ajuster() { champ.style.height = "auto"; champ.style.height = champ.scrollHeight + "px"; }
+champ.addEventListener("input", ajuster);
+document.getElementById("nouveau").addEventListener("click", async () => {
+  await fetch("/api/nouveau", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session }) });
+  location.reload();
+});
+
+const clicOrbe = () => (speechSynthesis.speaking ? taire() : ecouterCommande());
+document.getElementById("micro").addEventListener("click", ecouterCommande);
+document.getElementById("mini-orbe").addEventListener("click", clicOrbe);
+document.getElementById("grand-orbe").addEventListener("click", clicOrbe);
+document.getElementById("parler-vide").addEventListener("click", ecouterCommande);
+document.getElementById("point-du-jour").addEventListener("click", () => parler(briefing()));
+document.addEventListener("keydown", (e) => {
+  if (e.ctrlKey && e.key.toLowerCase() === "m") { e.preventDefault(); ecouterCommande(); }
+  if (e.key === "Escape" && !document.querySelector("dialog[open]")) { commande?.abort(); taire(); }
+});
+
+document.getElementById("mains-libres").addEventListener("click", () => {
+  if (!Reco) return notifier("La reconnaissance vocale demande Chrome ou Edge.", "ph-microphone-slash");
+  reglages.mainsLibres = !reglages.mainsLibres; sauverReglages();
+  if (reglages.mainsLibres) notifier(`Mains libres activé : dis « ${reglages.eveil} », puis ta demande.`, "ph-ear");
+  else arreterEveil();
+  majMicro(); repos(); charger();
+});
+
+const fenetreVoix = document.getElementById("fenetre-voix");
+document.getElementById("ouvrir-voix").addEventListener("click", () => {
+  chargerVoix();
+  document.getElementById("r-parler").value = reglages.parler;
+  document.getElementById("r-vitesse").value = reglages.vitesse;
+  document.getElementById("r-eveil").value = reglages.eveil;
+  fenetreVoix.showModal();
+});
+fenetreVoix.addEventListener("change", () => {
+  reglages.parler = document.getElementById("r-parler").value;
+  reglages.voix = document.getElementById("r-voix").value;
+  reglages.vitesse = Number(document.getElementById("r-vitesse").value);
+  reglages.eveil = document.getElementById("r-eveil").value.trim() || "Jarvis";
+  sauverReglages(); actualiserNom(); repos();
+});
+document.getElementById("r-tester").addEventListener("click", () => {
+  fenetreVoix.dispatchEvent(new Event("change"));
+  parler(`Bonjour, je suis ${reglages.eveil}. Je cherche tes clients, je leur écris et je te tiens au courant.`);
+});
+
+function actualiserNom() {
+  document.getElementById("nom-assistant").textContent = reglages.eveil.toUpperCase();
+  document.title = `${reglages.eveil} · Agent Freelance`;
+}
+if (!Reco) document.getElementById("astuce-voix").textContent = "Pour me parler à voix haute, ouvre cette page dans Chrome ou Edge.";
+actualiserNom(); majMicro(); repos(); charger();
+</script>
+</body>
+</html>

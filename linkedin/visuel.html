@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Visuel LinkedIn</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+  :root { --fond: #070b10; --texte: #e3eef5; --doux: #8aa0b0; --accent: #3fd0ee; --bord: #1f3140; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1080px; height: 1350px; overflow: hidden; }
+  body {
+    background:
+      radial-gradient(700px 420px at 50% 62%, rgb(63 208 238 / .16), transparent 70%),
+      radial-gradient(900px 500px at 50% -10%, rgb(63 208 238 / .10), transparent 65%),
+      var(--fond);
+    color: var(--texte); font-family: Inter, sans-serif;
+    padding: 64px 60px 52px; display: flex; flex-direction: column;
+  }
+  /* Grille HUD discrète */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background-image: linear-gradient(rgb(63 208 238 / .05) 1px, transparent 1px), linear-gradient(90deg, rgb(63 208 238 / .05) 1px, transparent 1px);
+    background-size: 54px 54px; mask-image: radial-gradient(ellipse at 50% 40%, #000 30%, transparent 75%);
+  }
+  .tag { font: 500 15px "JetBrains Mono", monospace; color: var(--accent); letter-spacing: .14em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+  .tag::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  h1 { font: 700 62px/1.04 "Chakra Petch", sans-serif; margin: 20px 0 18px; letter-spacing: -.01em; }
+  h1 em { font-style: normal; color: var(--accent); text-shadow: 0 0 28px rgb(63 208 238 / .45); }
+  .sous { font-size: 23px; line-height: 1.45; color: var(--doux); margin: 0; max-width: 900px; }
+  .sous b { color: var(--texte); font-weight: 600; }
+  .ecran {
+    margin-top: 40px; border-radius: 16px; overflow: hidden; position: relative;
+    border: 1px solid var(--bord);
+    box-shadow: 0 0 0 1px rgb(63 208 238 / .15), 0 30px 80px rgb(0 0 0 / .6), 0 0 90px rgb(63 208 238 / .18);
+  }
+  .barre { height: 34px; background: #0d161e; border-bottom: 1px solid var(--bord); display: flex; align-items: center; gap: 7px; padding: 0 14px; }
+  .barre span { width: 11px; height: 11px; border-radius: 50%; background: #24384a; }
+  .barre .url { width: auto; height: auto; background: none; margin-left: 14px; font: 500 13px "JetBrains Mono", monospace; color: #5d7385; }
+  .ecran img { display: block; width: 100%; }
+  .atouts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 40px; }
+  .atout { border: 1px solid var(--bord); border-radius: 12px; padding: 16px 12px; background: rgb(11 18 24 / .8); text-align: center; }
+  .atout i { font-size: 32px; color: var(--accent); }
+  .atout div { font-size: 15.5px; font-weight: 500; margin-top: 8px; line-height: 1.3; }
+  footer { margin-top: auto; display: flex; align-items: center; justify-content: space-between; padding-top: 22px; border-top: 1px solid var(--bord); }
+  footer strong { font: 600 21px "Chakra Petch", sans-serif; letter-spacing: .04em; }
+  footer small { display: block; color: var(--doux); font-size: 16px; margin-top: 2px; }
+  .pile { font: 500 14px "JetBrains Mono", monospace; color: var(--doux); text-align: right; line-height: 1.6; }
+</style>
+</head>
+<body>
+  <div class="tag">Projet perso · Agent IA</div>
+  <h1>J'ai construit mon propre <em>Jarvis</em> pour trouver des clients.</h1>
+  <p class="sous">Il cherche des missions, repère des entreprises en Afrique, en Europe et au Canada, audite leurs sites, <b>écrit, répond et relance.</b> Et je lui parle à voix haute.</p>
+
+  <div class="ecran">
+    <div class="barre"><span></span><span></span><span></span><span class="url">localhost:8000 · Jarvis</span></div>
+    <img src="tableau-de-bord.png" alt="">
+  </div>
+
+  <div class="atouts">
+    <div class="atout"><i class="ph-duotone ph-briefcase"></i><div>Missions freelance</div></div>
+    <div class="atout"><i class="ph-duotone ph-globe-hemisphere-east"></i><div>Prospection<br>4 zones</div></div>
+    <div class="atout"><i class="ph-duotone ph-gauge"></i><div>Audits de sites</div></div>
+    <div class="atout"><i class="ph-duotone ph-envelope-simple"></i><div>Emails &amp; relances</div></div>
+    <div class="atout"><i class="ph-duotone ph-microphone"></i><div>Commande vocale</div></div>
+  </div>
+
+  <footer>
+    <div><strong>Damien Paraiso</strong><small>Développeur web freelance</small></div>
+    <div class="pile">Python · FastAPI<br>Claude (Anthropic) · Web Speech</div>
+  </footer>
+</body>
+</html>

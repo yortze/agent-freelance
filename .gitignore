@@ -1,0 +1,14 @@
+# Secrets
+.env
+
+# Données réelles (prospects, emails, journal) et rapports
+donnees/
+audits/
+
+# Environnement Python
+.venv/
+__pycache__/
+*.pyc
+
+# Outils locaux
+.claude/
